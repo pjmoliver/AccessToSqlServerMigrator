@@ -1,0 +1,31 @@
+# Use Windows Server Core with .NET 8
+FROM mcr.microsoft.com/dotnet/runtime:8.0-windowsservercore-ltsc2022
+
+# Install .NET 8 SDK
+FROM mcr.microsoft.com/dotnet/sdk:8.0-windowsservercore-ltsc2022 AS build
+
+# Set working directory
+WORKDIR /app
+
+# Copy project files
+COPY ["src/AccessToSqlServerMigrator.App/AccessToSqlServerMigrator.App.csproj", "src/AccessToSqlServerMigrator.App/"]
+RUN dotnet restore "src/AccessToSqlServerMigrator.App/AccessToSqlServerMigrator.App.csproj"
+
+# Copy all source files
+COPY . .
+
+# Build the application
+WORKDIR "/app/src/AccessToSqlServerMigrator.App"
+RUN dotnet build "AccessToSqlServerMigrator.App.csproj" -c Release -o /app/build
+
+FROM mcr.microsoft.com/dotnet/runtime:8.0-windowsservercore-ltsc2022 AS final
+
+# Install Microsoft Access Database Engine 2016 Redistributable
+# Note: You'll need to download this manually and add it to the build context
+# COPY ["AccessDatabaseEngine_X64.exe", "/temp/"]
+# RUN /temp/AccessDatabaseEngine_X64.exe /quiet
+
+WORKDIR /app
+COPY --from=build /app/build .
+
+ENTRYPOINT ["dotnet", "AccessToSqlServerMigrator.App.dll"]
